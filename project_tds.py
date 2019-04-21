@@ -49,36 +49,69 @@ from openpyxl.chart import ScatterChart, Reference, Series
 , datetime))... then ('last quarter', ('project start', datetime)) etc... then ('baseline quarter', ('project start',
 datetime)) etc...'''
 
-def milestone_extraction(projects, master_data_all, milestone_keys, milestone_dates):
+def milestone_extraction(projects, master_data_all, td_stages):
     global project, quarter_master
     output_dict = {}
 
     '''firstly business cases of interest are filtered out by bc_ref_stage function'''
     list_of_bc_stages = bc_ref_stages(projects, master_data_all)
+    #print(list_of_bc_stages)
 
     for project in projects:
-        print(project)
         td_list = []
         bc_interest = list_of_bc_stages[project]
         for i in range(0, len(bc_interest)):
             for master in master_data_all:
                 try:
+
                     date = master[project]['Reporting period (GMPP - Snapshot Date)']
 
                     if date == bc_interest[i][0]:
-                        for x in range(len(milestone_keys)):
-                            key_1 = milestone_keys[x]
-                            milestone_name = master[project][key_1]
-                            key_2 = milestone_dates[x]
-                            milestone_date = master[project][key_2]
-                            td_info = (milestone_name, milestone_date)
-                            td_list.append((date, td_info))
+                        print(date)
+                        all_milestones = all_milestone_data(master, project)
+                        print(all_milestones)
+                        for item in td_stages:
+                            if item in all_milestones[project].keys():
+                                td_info = (item, all_milestones[project][item])
+                                td_list.append((date, td_info))
+                            else:
+                                td_info = (item, 'none')
+                                td_list.append((date, td_info))
                 except KeyError:
                     pass
 
         output_dict[project] = td_list
 
+    #print(output_dict)
+
     return output_dict
+
+def all_milestone_data(master_data, name):
+    upper_dict = {}
+
+    p_data = master_data[name]
+    lower_dict = {}
+    for i in range(1, 50):
+        try:
+            try:
+                lower_dict[p_data['Approval MM' + str(i)]] = p_data['Approval MM' + str(i) + ' Forecast / Actual']
+            except KeyError:
+                lower_dict[p_data['Approval MM' + str(i)]] = p_data['Approval MM' + str(i) + ' Forecast - Actual']
+
+            lower_dict[p_data['Assurance MM' + str(i)]] = p_data['Assurance MM' + str(i) + ' Forecast - Actual']
+        except KeyError:
+            pass
+
+    for i in range(18, 67):
+        try:
+            lower_dict[p_data['Project MM' + str(i)]] = p_data['Project MM' + str(i) + ' Forecast - Actual']
+        except KeyError:
+            pass
+
+    upper_dict[name] = lower_dict
+    print('hello')
+
+    return upper_dict
 
 ''' function to returns a dictionary structured in the following way project name[('latest quarter info', 'latest bc'), 
 ('last quarter info', 'last bc'), ('last baseline quarter info', 'last baseline bc'), ('oldest quarter info', 
@@ -344,35 +377,39 @@ def run(project_name, milestone_data, td_data):
     wb = Workbook()
     ws = wb.active
     parser_1 = placing_date_in_excel_single(ws, project_name, milestone_data, td_data)
-    approval_point = zero[project_name]['BICC approval point']
+    approval_point = q4_1819[project_name]['BICC approval point']
 
     build_chart_single(parser_1, project_name, approval_point, td_data)
 
     return wb
 
 '''master files are loaded here'''
-zero_2 = project_data_from_master('C:\\Users\\Standalone\\Will\\masters folder\\master_3_2018.xlsx')
-zero = project_data_from_master('C:\\Users\\Standalone\\Will\\masters folder\\master_2_2018.xlsx')
-one = project_data_from_master('C:\\Users\\Standalone\\Will\\masters folder\\master_1_2018.xlsx')
-two = project_data_from_master('C:\\Users\\Standalone\\Will\\masters folder\\master_4_2017.xlsx')
-three = project_data_from_master('C:\\Users\\Standalone\\Will\\masters folder\\master_3_2017.xlsx')
-four = project_data_from_master('C:\\Users\\Standalone\\Will\\masters folder\\master_2_2017.xlsx')
-five = project_data_from_master('C:\\Users\\Standalone\\Will\\masters folder\\master_1_2017.xlsx')
-six = project_data_from_master('C:\\Users\\Standalone\\Will\\masters folder\\master_4_2016.xlsx')
-last = project_data_from_master('C:\\Users\\Standalone\\Will\\masters folder\\master_3_2016.xlsx')
+q4_1819 = project_data_from_master('C:\\Users\\Standalone\\Will\\masters folder\\core data\\master_4_2018_wip.xlsx')
+q3_1819 = project_data_from_master('C:\\Users\\Standalone\\Will\\masters folder\\core data\\master_3_2018.xlsx')
+q2_1819 = project_data_from_master('C:\\Users\\Standalone\\Will\\masters folder\\core data\\master_2_2018.xlsx')
+q1_1819 = project_data_from_master('C:\\Users\\Standalone\\Will\\masters folder\\core data\\master_1_2018.xlsx')
+q4_1718 = project_data_from_master('C:\\Users\\Standalone\\Will\\masters folder\\core data\\master_4_2017.xlsx')
+q3_1718 = project_data_from_master('C:\\Users\\Standalone\\Will\\masters folder\\core data\\master_3_2017.xlsx')
+q2_1718 = project_data_from_master('C:\\Users\\Standalone\\Will\\masters folder\\core data\\master_2_2017.xlsx')
+q1_1718 = project_data_from_master('C:\\Users\\Standalone\\Will\\masters folder\\core data\\master_1_2017.xlsx')
+q4_1617 = project_data_from_master('C:\\Users\\Standalone\\Will\\masters folder\\core data\\master_4_2016.xlsx')
+q3_1617 = project_data_from_master('C:\\Users\\Standalone\\Will\\masters folder\\core data\\master_3_2016.xlsx')
 
 '''master files put into a list'''
-master_list_all = [zero_2, zero, one, two, three, four, five, six, last]
+master_list_all = [q4_1819, q3_1819, q2_1819, q1_1819, q4_1718, q3_1718, q2_1718, q1_1718, q4_1617, q3_1617]
 #master_list_two = [zero, last]
 
-project_names = zero.keys()
-#project_names = ['Network Rail Asset Disposal']
+project_names = q4_1819.keys()
+#project_names = ['M4 Junctions 3 to 12 Smart Motorway']
 
-milestone_keys = ['Project MM18', 'Approval MM1', 'Approval MM3', 'Approval MM10', 'Project MM19', 'Project MM20', 'Project MM21']
-milestone_dates = ['Project MM18 Forecast - Actual', 'Approval MM1 Forecast / Actual', 'Approval MM3 Forecast / Actual', 'Approval MM10 Forecast / Actual',
-                   'Project MM19 Forecast - Actual', 'Project MM20 Forecast - Actual', 'Project MM21 Forecast - Actual']
+td_milestones = ['Start of Project', 'SOBC - BICC Approval', 'OBC - BICC Approval', 'FBC - BICC Approval',
+                 'Start of Construction/build', 'Start of Operation', 'Project End Date']
 
-milestone_data = milestone_extraction(project_names, master_list_all, milestone_keys, milestone_dates)
+#milestone_keys = ['Project MM18', 'Approval MM1', 'Approval MM3', 'Approval MM10', 'Project MM19', 'Project MM20', 'Project MM21']
+#milestone_dates = ['Project MM18 Forecast - Actual', 'Approval MM1 Forecast / Actual', 'Approval MM3 Forecast / Actual', 'Approval MM10 Forecast / Actual',
+#                   'Project MM19 Forecast - Actual', 'Project MM20 Forecast - Actual', 'Project MM21 Forecast - Actual']
+
+milestone_data = milestone_extraction(project_names, master_list_all, td_milestones)
 
 td_data = cal_td(milestone_data)
 
